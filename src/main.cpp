@@ -16,9 +16,9 @@
 // 子機データ構造
 struct SensorData
 {
-  int status; // 0 OK
-              // 1 異常
-  float temp;
+  int status; // 0 未接続
+              // 1 正常
+  float tmp;
   float hum;
 };
 
@@ -26,7 +26,7 @@ struct OwnData
 {
   String ip;      // IPアドレス（4バイト）
   String timeStr; // 受信した日時（文字列）
-  float temp;
+  float tmp;
   float hum;
   float pres;
 };
@@ -318,7 +318,7 @@ void readOwnTemp()
   {
     Serial.println("BMP280 read error");
   }
-  OwnTemp.temp = temp.temperature;
+  OwnTemp.tmp = temp.temperature;
   OwnTemp.hum = humidity.relative_humidity;
   OwnTemp.pres = pres;
 
@@ -391,7 +391,7 @@ bool fetchTempCenter()
 
       for (int i = 0; i < MAX_CLIENTS; i++)
       {
-        children[i].temp = 0.0f;
+        children[i].tmp = 0.0f;
         children[i].hum = 0.0f;
         children[i].status = -1;
       }
@@ -405,26 +405,26 @@ bool fetchTempCenter()
         }
 
         int status = sensor["status"] | 0;
-        if (status == 0)
+        if (status == 1)
         {
           JsonVariantConst tempVar = sensor["aht_temp"];
           JsonVariantConst humVar = sensor["humidity"];
           if (tempVar.is<float>() && humVar.is<float>())
           {
-            children[idx].temp = tempVar.as<float>();
+            children[idx].tmp = tempVar.as<float>();
             children[idx].hum = humVar.as<float>();
             children[idx].status = status;
           }
           else
           {
-            children[idx].temp = 0.0f;
+            children[idx].tmp = 0.0f;
             children[idx].hum = 0.0f;
             children[idx].status = -1;
           }
         }
         else
         {
-          children[idx].temp = 0.0f;
+          children[idx].tmp = 0.0f;
           children[idx].hum = 0.0f;
           children[idx].status = -1;
         }
@@ -481,7 +481,7 @@ void headbudPrint(int col)
   headbuf.printf("%s-%.1f", OwnTemp.timeStr.c_str(), ((float)scan_timing / 1000));
   headbuf.setCursor(30, 38);
   headbuf.setTextSize(1);
-  headbuf.printf("%.1f℃ %.1f%% %.1fpHa", OwnTemp.temp, OwnTemp.hum, OwnTemp.pres);
+  headbuf.printf("%.1f℃ %.1f%% %.1fhPa", OwnTemp.tmp, OwnTemp.hum, OwnTemp.pres);
   headbuf.drawRoundRect(0, 0, SCR_WIDTH - 1, SCR_HEAD_HEIGHT - 1, 6, col);
   headbuf.setTextSize(1);
 }
@@ -491,7 +491,7 @@ void scrbudPrint(int index)
   if (index >= MAX_CLIENTS)
     return;
   String id = String(index + 1);
-  float t = children[index].temp;
+  float t = children[index].tmp;
   float h = children[index].hum;
   int mode = 0;
   //
@@ -499,7 +499,7 @@ void scrbudPrint(int index)
   //  1 Count err /Disconnect
   //
   int col = TFT_WHITE;
-  if (children[index].status != 0)
+  if (children[index].status != 1)
   {
     mode = 1;
     col = TFT_RED;
@@ -693,7 +693,7 @@ void loop()
     bool err = false;
     for (int i = 0; i < MAX_CLIENTS; i++)
     {
-      if (children[i].status == 0)
+      if (children[i].status == 1)
         continue;
       if (children[i].hum >= 35.0f)
       {
